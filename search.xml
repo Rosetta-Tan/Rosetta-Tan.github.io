@@ -1,27 +1,73 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>Hello World</title>
-    <url>/2020/07/11/hello-world/</url>
-    <content><![CDATA[<p>Welcome to <a href="https://hexo.io/" target="_blank" rel="noopener">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/" target="_blank" rel="noopener">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html" target="_blank" rel="noopener">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo new <span class="string">"My New Post"</span></span><br></pre></td></tr></table></figure>
-
-<p>More info: <a href="https://hexo.io/docs/writing.html" target="_blank" rel="noopener">Writing</a></p>
-<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
-
-<p>More info: <a href="https://hexo.io/docs/server.html" target="_blank" rel="noopener">Server</a></p>
-<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
-
-<p>More info: <a href="https://hexo.io/docs/generating.html" target="_blank" rel="noopener">Generating</a></p>
-<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
-
-<p>More info: <a href="https://hexo.io/docs/one-command-deployment.html" target="_blank" rel="noopener">Deployment</a></p>
-]]></content>
-  </entry>
-  <entry>
     <title>kwant教程（一）</title>
-    <url>/2020/07/11/symple-system-conductance/</url>
-    <content><![CDATA[<h1 id="Test"><a href="#Test" class="headerlink" title="Test"></a>Test</h1><p>我就试一下.</p>
+    <url>/2020/07/11/kwant%E6%95%99%E7%A8%8B%EF%BC%88%E4%B8%80%EF%BC%89/</url>
+    <content><![CDATA[<h1 id="输运计算：最简单的系统"><a href="#输运计算：最简单的系统" class="headerlink" title="输运计算：最简单的系统"></a>输运计算：最简单的系统</h1><p>本例计算简单系统的电导.</p>
+<h2 id="量子线-Quantum-Wire"><a href="#量子线-Quantum-Wire" class="headerlink" title="量子线(Quantum Wire)"></a>量子线(Quantum Wire)</h2><p>给定一个二维系统<br>$$H=\frac{-\hbar^2}{2m}\left( \partial^2_x+\partial^2_y \right)+V\left(y\right)$$<br>需要离散化为紧束缚模型才能做计算.</p>
+<p>用$(i,j)$代表原来的$(x,y)=(ai,aj)$，并记为$$|i,j\rangle \equiv |ai,aj\rangle \equiv |x,y\rangle$$<br>于是<br>$$\partial_{x}^{2}=\frac{1}{a^{2}} \sum_{i, j}(|i+1, j\rangle\langle i, j|+| i, j\rangle\langle i+1, j|-2| i, j\rangle\langle i, j|)$$<br>$$H=\sum_{i, j}[(V(a i, a j)+4 t)|i, j\rangle\langle i, j|-t(|i+1, j\rangle\langle i, j|+| i, j\rangle\langle i+1, j|+| i, j+1\rangle\langle i, j|+| i, j\rangle\langle i, j+1|)]$$<br>其中$t=\frac{\hbar^2}{2ma^2}$.</p>
+<p>下面使用kwant进行计算.</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> kwant</span><br></pre></td></tr></table></figure>
+
+<p>首先需要用<code>Builder</code>建立一个系统，这里指定为方格子.</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">syst = kwant.Builder()</span><br><span class="line">a = <span class="number">1</span></span><br><span class="line">lat = kwant.lattice.square(a)</span><br></pre></td></tr></table></figure>
+
+<p>建立一个长$L$宽$W$的散射区域.考虑二维无穷方势阱.并设置在位能和跃迁能.</p>
+<p>通过<code>syst[lat(i, j)] = ...</code>设置on-site项，通过<code>syst[lat(i1, j1), lat(i2, j2)] = ...</code>设置hopping项(从$(i_2,j_2)$跳到$(i_1,j_1)$).</p>
+<p>设置hopping项时只需要设置一边，<code>Builder</code>会自动添加另一边，使整个矩阵是Hermitian的.但也可以手动添加另一边，这种方式可以将设置成non-Hermitian的.</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">t = <span class="number">1.0</span></span><br><span class="line">L = <span class="number">30</span></span><br><span class="line">W = <span class="number">10</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 建立散射区域</span></span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> range(L):</span><br><span class="line">    <span class="keyword">for</span> j <span class="keyword">in</span> range(W):</span><br><span class="line">        <span class="comment"># 在位能(散射区域中势为0)</span></span><br><span class="line">        syst[lat(i, j)] = <span class="number">4</span> * t</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># y方向hopping</span></span><br><span class="line">        <span class="keyword">if</span> j &gt; <span class="number">0</span>:</span><br><span class="line">            syst[lat(i, j), lat(i, j - <span class="number">1</span>)] = -t</span><br><span class="line">           </span><br><span class="line">        <span class="comment"># x方向hopping</span></span><br><span class="line">        <span class="keyword">if</span> i &gt; <span class="number">0</span>:</span><br><span class="line">            syst[lat(i, j), lat(i - <span class="number">1</span>, j)] = -t</span><br></pre></td></tr></table></figure>
+
+<p>建立lead，<code>Builder</code>选择参数<code>TranslationalSymmetry</code>.注意平移矢量$(-a,0)$必须要从散射区域指向左侧的lead(lead 0为左侧的lead，并且延伸至无穷远).由于x方向具有晶格平移对称性，y方向具有连续的平移对称性，可以将一竖行的sites视为一个unit cell.</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">sym_left_lead = kwant.TranslationalSymmetry((-a, <span class="number">0</span>))</span><br><span class="line">left_lead = kwant.Builder(sym_left_lead)</span><br></pre></td></tr></table></figure>
+
+<p>为左侧的lead设置参数.</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">for</span> j <span class="keyword">in</span> range(W):</span><br><span class="line">    left_lead[lat(<span class="number">0</span>, j)] = <span class="number">4</span> * t</span><br><span class="line">    <span class="keyword">if</span> j &gt; <span class="number">0</span>:</span><br><span class="line">        left_lead[lat(<span class="number">0</span>, j), lat(<span class="number">0</span>, j - <span class="number">1</span>)] = -t</span><br><span class="line">    left_lead[lat(<span class="number">1</span>, j), lat(<span class="number">0</span>, j)] = -t</span><br><span class="line">    </span><br><span class="line">syst.attach_lead(left_lead)</span><br></pre></td></tr></table></figure>
+
+
+
+
+<pre><code>[]</code></pre><p>右侧lead同理.</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">sym_right_lead = kwant.TranslationalSymmetry((a, <span class="number">0</span>))</span><br><span class="line">right_lead = kwant.Builder(sym_right_lead)</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> j <span class="keyword">in</span> range(W):</span><br><span class="line">    right_lead[lat(<span class="number">0</span>, j)] = <span class="number">4</span> * t</span><br><span class="line">    <span class="keyword">if</span> j &gt; <span class="number">0</span>:</span><br><span class="line">        right_lead[lat(<span class="number">0</span>, j), lat(<span class="number">0</span>, j - <span class="number">1</span>)] = -t</span><br><span class="line">    <span class="comment">#</span></span><br><span class="line">    right_lead[lat(<span class="number">1</span>, j), lat(<span class="number">0</span>, j)] = -t</span><br><span class="line"></span><br><span class="line">syst.attach_lead(right_lead)</span><br></pre></td></tr></table></figure>
+
+
+
+
+<pre><code>[]</code></pre><p>构建完系统后画图检查一下.</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">kwant.plot(syst)</span><br></pre></td></tr></table></figure>
+
+
+<p><img src="output_13_0.png" alt=""></p>
+<p><img src="output_13_1.png" alt=""></p>
+<p>在进行输运计算以前还需要finalize一下.</p>
+<p>这会将<code>Builder</code>类型转化为<code>System</code>类型，系统的结构被确定下来不能再更改，原来<code>Builder</code>类型的对象被删除，不能再访问.</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">syst = syst.finalized()</span><br></pre></td></tr></table></figure>
+
+<p>计算电导.</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">energies = []</span><br><span class="line">data = []</span><br><span class="line"><span class="keyword">for</span> ie <span class="keyword">in</span> range(<span class="number">100</span>):</span><br><span class="line">    energy = ie * <span class="number">0.01</span></span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 计算给定能量的散射矩阵</span></span><br><span class="line">    smatrix = kwant.smatrix(syst, energy)</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 计算从lead 0到lead 1的跃迁几率</span></span><br><span class="line">    energies.append(energy)</span><br><span class="line">    data.append(smatrix.transmission(<span class="number">1</span>, <span class="number">0</span>))</span><br></pre></td></tr></table></figure>
+
+<p>最后用<code>matplotlib</code>画一下结果.</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">from</span> matplotlib <span class="keyword">import</span> pyplot</span><br><span class="line"></span><br><span class="line">pyplot.figure()</span><br><span class="line">pyplot.plot(energies, data)</span><br><span class="line">pyplot.xlabel(<span class="string">"energy [$t$]"</span>)</span><br><span class="line">pyplot.ylabel(<span class="string">"conductance [$e^2/h$]"</span>)</span><br><span class="line">pyplot.show()</span><br></pre></td></tr></table></figure>
+
+
+<p><img src="output_19_0.png" alt=""></p>
+<h2 id="另一种方法（代码量更小）"><a href="#另一种方法（代码量更小）" class="headerlink" title="另一种方法（代码量更小）"></a>另一种方法（代码量更小）</h2><p>下面我们用一种更加结构化、更加精炼的方法来重复上面的过程.</p>
+<ul>
+<li>建立散射区域</li>
+</ul>
+<p>之前是用两个<code>for</code>循环建立散射区域的lattice sites，此处用生成器的方法.</p>
+<p>在设置hopping项时，可以利用<code>HoppingKind</code>(不用引入新site，通过晶格平移就可以互相联系的hopping项).例如：表示最近临跃迁的<code>HppingKind</code>是<code>lat.neighbors()</code>，可以直接对其赋值.第n近临与之类似，为<code>lat.neighbors(n)</code>.</p>
+<ul>
+<li>建立并接上leads</li>
+</ul>
+<p>建立好左侧lead之后，由于右侧lead与之相差的只有平移矢量，可以直接用<code>lead.reversed()</code>来建立右侧lead.</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">make_system</span><span class="params">(a=<span class="number">1</span>, t=<span class="number">1.0</span>, L=<span class="number">30</span>, W=<span class="number">10</span>)</span>:</span></span><br><span class="line">    lat = kwant.lattice.square(a)</span><br><span class="line">    </span><br><span class="line">    syst = kwant.Builder()</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 建立散射区域</span></span><br><span class="line">    syst[(lat(x, y) <span class="keyword">for</span> x <span class="keyword">in</span> range(L) <span class="keyword">for</span> y <span class="keyword">in</span> range(W))] = <span class="number">4</span> * t</span><br><span class="line">    syst[lat.neighbors()] = -t</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 建立并接上leads</span></span><br><span class="line">    lead = kwant.Builder(kwant.TranslationalSymmetry((-a, <span class="number">0</span>))) <span class="comment">#</span></span><br><span class="line">    lead[(lat(<span class="number">0</span>, j) <span class="keyword">for</span> j <span class="keyword">in</span> range(W))] = <span class="number">4</span> * t</span><br><span class="line">    lead[lat.neighbors()] = -t</span><br><span class="line">    </span><br><span class="line">    syst.attach_lead(lead)</span><br><span class="line">    syst.attach_lead(lead.reversed())</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">return</span> syst</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">plot_conductance</span><span class="params">(syst, energies)</span>:</span></span><br><span class="line">    data = []</span><br><span class="line">    <span class="keyword">for</span> energy <span class="keyword">in</span> energies:</span><br><span class="line">        smatrix = kwant.smatrix(syst, energy)</span><br><span class="line">        data.append(smatrix.transmission(<span class="number">1</span>, <span class="number">0</span>))</span><br><span class="line">        </span><br><span class="line">    pyplot.figure()</span><br><span class="line">    pyplot.plot(energies, data)</span><br><span class="line">    pyplot.xlabel(<span class="string">"energy [$t$]"</span>)</span><br><span class="line">    pyplot.ylabel(<span class="string">"conductance [$e^2/h$]"</span>)</span><br><span class="line">    pyplot.show()</span><br><span class="line">    </span><br><span class="line">    </span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span><span class="params">()</span>:</span></span><br><span class="line">    syst = make_system()</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 画图检查建立的系统</span></span><br><span class="line">    kwant.plot(syst)</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># finzalize系统</span></span><br><span class="line">    syst = syst.finalized()</span><br><span class="line">    </span><br><span class="line">    plot_conductance(syst, energies = [<span class="number">0.01</span> * i <span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">100</span>)])</span><br><span class="line">    </span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">'__main__'</span>:</span><br><span class="line">    main()</span><br></pre></td></tr></table></figure>
+
+
+<p><img src="output_22_0.png" alt=""></p>
+<p><img src="output_22_1.png" alt=""></p>
 ]]></content>
+      <tags>
+        <tag>数值计算</tag>
+      </tags>
   </entry>
 </search>
